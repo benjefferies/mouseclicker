@@ -32,35 +32,34 @@ class Clicker(object):
             first = True
             time_since_first_click = datetime.now()
             for clickEvent in self.get_random_batch():
-                x = clickEvent['x']
-                y = clickEvent['y']
-                lag = self.calculate_lag(x, y)
-                delay = self.calculate_delay(clickEvent['delay'], lag)
+                if first:
+                    time_since_first_click = datetime.now()
+                x, y = clickEvent['x'], clickEvent['y']
+                mouse_move_duration = self.calculate_lag(x, y)
+                delay = self.calculate_delay(clickEvent['delay'], mouse_move_duration)
+                predicted_time_per_alch = datetime.now() + timedelta(seconds=delay) - time_since_first_click
+                additional_delay = self.prevent_premeture_alch(predicted_time_per_alch, first)
+                delay += additional_delay
+                predicted_time_per_alch += timedelta(seconds=additional_delay)
                 self.sleep(delay)
-
-                print(f'Slept for {delay+lag} now clicking at {x}, {y} with lag {lag}')
-
-                time_since_first_click = self.prevent_premeture_alch(first, time_since_first_click)
-                self.click(x, y, lag)
+                print(f'Slept for {delay} + {mouse_move_duration} mouse delay now clicking at {x}, {y}')
+                if not first:
+                    print(f'Time per alch {predicted_time_per_alch.total_seconds()}')
+                self.click(x, y, mouse_move_duration)
                 first = not first
                 self.last_x, self.last_y = x, y
 
-    def prevent_premeture_alch(self, first, time_since_first_click):
-        if not first:
-            alch_time = datetime.now() - time_since_first_click
-            if alch_time < timedelta(seconds=3.1):
-                print(f'Preventing premature alch with sleep {alch_time.total_seconds()}')
-                time.sleep(3.1 - alch_time.total_seconds())
-            delta = alch_time
-            print(f'Time per alch {delta.total_seconds()}')
-            return datetime.now()
-        else:
-            return time_since_first_click
+    def prevent_premeture_alch(self, time_per_alch, first):
+            if not first and time_per_alch < timedelta(seconds=3.1):
+                print(f'Preventing premature alch by adding delay {time_per_alch.total_seconds()}')
+                return 3.1 + randint(100, 300)/1000 - time_per_alch.total_seconds()
+            else:
+                return 0
 
-    def calculate_delay(self, delay, lag):
+    def calculate_delay(self, delay, mouse_move_duration):
         if delay > 0:
             delay = delay / 1000000000
-        delay = delay - lag if lag < delay else delay
+        delay = delay - mouse_move_duration if mouse_move_duration < delay else delay
         return delay if delay > 0.2 else delay + randint(20,30)/100 # Set minimum delay (adding 0.2-0.3)
 
     def calculate_lag(self, x, y):
@@ -70,8 +69,7 @@ class Clicker(object):
             return randint(0, 10) / 10
 
     def sleep(self, delay):
-            print(f'Sleeping for {delay}')
-            time.sleep(delay)
+        time.sleep(delay)
 
     def get_random_batch(self):
         return self.batched_clicks[randint(0, len(self.batched_clicks) - 1)]
