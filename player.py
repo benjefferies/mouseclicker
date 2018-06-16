@@ -50,8 +50,9 @@ class Clicker(object):
                 self.last_x, self.last_y = x, y
 
     def prevent_premeture_alch(self, time_per_alch, first):
-            if not first and time_per_alch < timedelta(seconds=3.1):
-                print(f'Preventing premature alch by adding delay {time_per_alch.total_seconds()}')
+            if not first and time_per_alch < timedelta(seconds=3.2):
+                additional_time = 3.1 + randint(100, 300) / 1000 - time_per_alch.total_seconds()
+                print(f'Preventing premature alch by adding delay {additional_time}')
                 return 3.1 + randint(100, 300)/1000 - time_per_alch.total_seconds()
             else:
                 return 0
